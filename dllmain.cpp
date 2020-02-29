@@ -1,6 +1,7 @@
 // dllmain.cpp : Définit le point d'entrée de l'application DLL.
 #include <fstream>
 #include <queue>
+#include <functional>
 
 #include <windows.h>
 
@@ -26,28 +27,21 @@ void checkHealth(void* monster) {
 	float maxHealth = *offsetPtr<float>(healthMgr, 0x60);
 
 	char* monsterPath = offsetPtr<char>(monster, 0x7741);
-	LOG(INFO) << SHOW(monsterPath);
 	if (monsterPath[2] == '0' || monsterPath[2] == '1') {
 		if (monsterMessages.find(monster) == monsterMessages.end()) {
 			monsterMessages[monster] = messages;
 		}
-
 		auto& monsterQueue = monsterMessages[monster];
-		if (!monsterQueue.empty()) {
-			if (health / maxHealth < monsterQueue.front().first) {
-				showMessage(monsterQueue.front().second);
-				monsterQueue.pop();
-			}
+		std::string lastMessage;
+		while (!monsterQueue.empty() && health / maxHealth < monsterQueue.front().first) {
+			lastMessage = monsterQueue.front().second;
+			monsterQueue.pop();
+		}
+		if (!lastMessage.empty()) {
+			showMessage(lastMessage);
 		}
 	}
 }
-
-CreateHook(LaunchAction, MH::Monster_LaunchAction, 
-	bool, void* monster, int actionId) {
-	checkHealth(monster);
-	return originalLaunchAction(monster, actionId);
-}
-
 static bool Load()
 {
 	if (std::string(GameVersion) != "404549") {
@@ -57,7 +51,7 @@ static bool Load()
 
 	std::ifstream file("nativePC/plugins/HealthNotes.json");
 	if (file.fail()) {
-		LOG(ERR) << "Config file not found";
+		LOG(ERR) << "Health notes : Config file not found";
 		return false;
 	}
 
@@ -71,8 +65,19 @@ static bool Load()
 
 
 	MH_Initialize();
+
+	HookLine(MH::SOBJ::LoadSOBJs,
+		[](auto ptr) {
+			LOG(INFO) << "New quest load detected, clearing";
+			monsterMessages.clear();
+			return original(ptr);
+		});
 	
-	QueueHook(LaunchAction);
+	HookLine(MH::Monster_LaunchAction, 
+		[](auto monster, auto id) {
+			checkHealth(monster);
+			return original(monster, id);
+		});
 
 	MH_ApplyQueued();
 

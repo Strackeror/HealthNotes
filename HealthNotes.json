@@ -1,0 +1,7 @@
+{
+    "messages": [
+        {"msg": "The monster is showing\n<STYL MOJI_YELLOW_DEFAULT>signs of moderate injuries</STYL>.", "ratio":0.50},
+        {"msg": "The monster is showing\n<STYL MOJI_ORANGE_DEFAULT>signs of severe injuries</STYL>.", "ratio":0.25},
+        {"msg": "<STYL MOJI_RED_DEFAULT>The monster is critically injured !</STYL>", "ratio":0.1}
+    ]
+}

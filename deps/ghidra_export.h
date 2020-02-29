@@ -87,7 +87,6 @@ namespace MH {
     static void *MainPtr = (void*)0x144df09d0;
     static void(*ShowGameMessage)(undefined *,char *,float,uint,byte) = (void(*)(undefined *,char *,float,uint,byte))0x15467e210;
   }
-  static void(*Unkn_IncreaseTimer)(longlong) = (void(*)(longlong))0x148adb7d0;
   static undefined8(*QuestUI_FilterList)() = (undefined8(*)())0x14b172a30;
   static undefined8(*Quest_CheckFlag)() = (undefined8(*)())0x1542b84c0;
   static undefined8(*Quest_StarCategoryCheck)() = (undefined8(*)())0x14aa42e50;
@@ -120,5 +119,16 @@ namespace MH {
   }
   namespace EmSetter {
     static undefined8(*CreateMonster)() = (undefined8(*)())0x1546dcd30;
+  }
+  namespace SOBJ {
+    static undefined8(*Spawn)() = (undefined8(*)())0x155effdb0;
+    static undefined8(*Load)() = (undefined8(*)())0x155efd940;
+    namespace Unkn {
+      static undefined8(*CalledForEachSobj_)() = (undefined8(*)())0x14b75d6b0;
+    }
+    static void(*LoadSOBJs)(undefined *) = (void(*)(undefined *))0x154a19450;
+  }
+  namespace Timer {
+    static void(*Increase)(longlong) = (void(*)(longlong))0x148adb7d0;
   }
 }
