@@ -21,25 +21,30 @@ void showMessage(std::string message) {
 	MH::Chat::ShowGameMessage(*(undefined**)MH::Chat::MainPtr, &message[0], -1, -1, 0);
 }
 
+void handleMonsterCreated(undefined* monster)
+{
+	char* monsterPath = offsetPtr<char>(monster, 0x7741);
+	if (monsterPath[2] == '0' || monsterPath[2] == '1') {
+		LOG(INFO) << "Setting up health messages for " << monsterPath;
+		monsterMessages[monster] = messages;
+	}
+}
+
 void checkHealth(void* monster) {
 	void* healthMgr = *offsetPtr<void*>(monster, 0x7670);
 	float health = *offsetPtr<float>(healthMgr, 0x64);
 	float maxHealth = *offsetPtr<float>(healthMgr, 0x60);
 
 	char* monsterPath = offsetPtr<char>(monster, 0x7741);
-	if (monsterPath[2] == '0' || monsterPath[2] == '1') {
-		if (monsterMessages.find(monster) == monsterMessages.end()) {
-			monsterMessages[monster] = messages;
-		}
-		auto& monsterQueue = monsterMessages[monster];
-		std::string lastMessage;
-		while (!monsterQueue.empty() && health / maxHealth < monsterQueue.front().first) {
-			lastMessage = monsterQueue.front().second;
-			monsterQueue.pop();
-		}
-		if (!lastMessage.empty()) {
-			showMessage(lastMessage);
-		}
+	auto& monsterQueue = monsterMessages[monster];
+	std::string lastMessage;
+	while (!monsterQueue.empty() && health / maxHealth < monsterQueue.front().first) {
+		lastMessage = monsterQueue.front().second;
+		monsterQueue.pop();
+	}
+	if (!lastMessage.empty()) {
+		LOG(INFO) << "Message: " << lastMessage;
+		showMessage(lastMessage);
 	}
 }
 static bool Load()
@@ -65,15 +70,20 @@ static bool Load()
 
 
 	MH_Initialize();
-
-	HookLine(MH::SOBJ::LoadSOBJs,
-		[](auto ptr) {
-			LOG(INFO) << "New quest load detected, clearing";
-			monsterMessages.clear();
-			return original(ptr);
-		});
 	
-	HookLine(MH::Monster_LaunchAction, 
+	HookLine(MH::Monster::ctor,
+		[](auto monster, auto id, auto subId) {
+			auto ret = original(monster, id, subId);
+			handleMonsterCreated(monster);
+			return ret;
+		});
+	HookLine(MH::Monster::dtor,
+		[](auto monster) {
+			LOG(INFO) << "Monster destroyed " << (void*)monster;
+			monsterMessages.erase(monster);
+			return original(monster);
+		});
+	HookLine(MH::Monster::LaunchAction, 
 		[](auto monster, auto id) {
 			checkHealth(monster);
 			return original(monster, id);
