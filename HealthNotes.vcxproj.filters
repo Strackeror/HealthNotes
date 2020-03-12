@@ -23,7 +23,7 @@
     <Library Include="deps\minhook\libMinHook.x64.lib">
       <Filter>Fichiers de ressources</Filter>
     </Library>
-    <Library Include="deps\dinput8.lib">
+    <Library Include="deps\loader.lib">
       <Filter>Fichiers de ressources</Filter>
     </Library>
   </ItemGroup>

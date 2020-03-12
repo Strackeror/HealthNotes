@@ -47,9 +47,16 @@ void checkHealth(void* monster) {
 		showMessage(lastMessage);
 	}
 }
-static bool Load()
+
+CreateHook(MH::Monster::ctor, ConstructMonster, void*, void* this_ptr, unsigned int monster_id, unsigned int variant)
 {
-	if (std::string(GameVersion) != "404549") {
+	LOG(INFO) << "Creating Monster : " << monster_id << "-" << variant << " @0x" << this_ptr;
+	return original(this_ptr, monster_id, variant);
+}
+
+__declspec(dllexport) extern bool Load()
+{
+	if (std::string(GameVersion) != "406510") {
 		LOG(ERR) << "Health Notes : Wrong version";
 		return false;
 	}
@@ -59,6 +66,8 @@ static bool Load()
 		LOG(ERR) << "Health notes : Config file not found";
 		return false;
 	}
+
+	LOG(INFO) << "Health notes loading";
 
 	nlohmann::json ConfigFile = nlohmann::json::object();
 	file >> ConfigFile;
@@ -70,20 +79,20 @@ static bool Load()
 
 
 	MH_Initialize();
-	
-	HookLine(MH::Monster::ctor,
+
+	HookLambda(MH::Monster::ctor,
 		[](auto monster, auto id, auto subId) {
 			auto ret = original(monster, id, subId);
 			handleMonsterCreated(monster);
 			return ret;
 		});
-	HookLine(MH::Monster::dtor,
+	HookLambda(MH::Monster::dtor,
 		[](auto monster) {
 			LOG(INFO) << "Monster destroyed " << (void*)monster;
 			monsterMessages.erase(monster);
 			return original(monster);
 		});
-	HookLine(MH::Monster::LaunchAction, 
+	HookLambda(MH::Monster::LaunchAction, 
 		[](auto monster, auto id) {
 			checkHealth(monster);
 			return original(monster, id);
