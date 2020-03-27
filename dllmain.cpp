@@ -56,7 +56,7 @@ CreateHook(MH::Monster::ctor, ConstructMonster, void*, void* this_ptr, unsigned 
 
 __declspec(dllexport) extern bool Load()
 {
-	if (std::string(GameVersion) != "406510") {
+	if (std::string(GameVersion) != "408899") {
 		LOG(ERR) << "Health Notes : Wrong version";
 		return false;
 	}
