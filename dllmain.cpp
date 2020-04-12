@@ -17,6 +17,46 @@ static std::map<void*, std::queue<std::pair<float, std::string>>> monsterMessage
 
 using namespace loader;
 
+void DumpMonsterActions(undefined* monster)
+{
+	undefined* actionManager = monster + 0x61c8;
+	undefined* actionListPtr = actionManager + 0x68;
+	int group = 0;
+	int sz = *offsetPtr<int>(actionListPtr, 0x8);
+	char* monsterPath = offsetPtr<char>(monster, 0x7741);
+
+	if (monsterPath[2] == '0' || monsterPath[2] == '1') {
+		LOG(INFO) << "=====";
+		LOG(INFO) << "Actions For" << monsterPath;
+		LOG(INFO) << "=====";
+
+		while (sz > 0)
+		{
+			LOG(INFO) << "Group : " << group << " Size : " << sz;
+			void** actionList = *(void***)actionListPtr;
+			if (actionList) {
+				for (long long i = 1; i < sz; ++i)
+				{
+					void* action = actionList[i];
+					if (action == nullptr) continue;
+					char* actionName = *offsetPtr<char*>(action, 0x20);
+					LOG(INFO) << "Group:" << group << " ID:" << i << " Name:" << actionName;
+				}
+			}
+			group++;
+			actionListPtr += 0x10;
+			sz = *offsetPtr<int>(actionListPtr, 0x8);
+		}
+
+		LOG(INFO) << "=====";
+		LOG(INFO) << "=====";
+		LOG(INFO) << "=====";
+		LOG(INFO) << "=====";
+		LOG(INFO) << "=====";
+		LOG(INFO) << "=====";
+	}
+}
+
 void showMessage(std::string message) {
 	MH::Chat::ShowGameMessage(*(undefined**)MH::Chat::MainPtr, &message[0], -1, -1, 0);
 }
@@ -90,6 +130,7 @@ __declspec(dllexport) extern bool Load()
 		[](auto monster) {
 			LOG(INFO) << "Monster destroyed " << (void*)monster;
 			monsterMessages.erase(monster);
+			DumpMonsterActions(monster);
 			return original(monster);
 		});
 	HookLambda(MH::Monster::LaunchAction, 
