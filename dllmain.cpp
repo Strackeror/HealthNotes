@@ -2,6 +2,7 @@
 #include <fstream>
 #include <queue>
 #include <functional>
+#include <mutex>
 
 #include <windows.h>
 
@@ -14,6 +15,8 @@
 
 static std::queue<std::pair<float, std::string>> messages;
 static std::map<void*, std::queue<std::pair<float, std::string>>> monsterMessages;
+static std::mutex lock;
+
 
 using namespace loader;
 
@@ -26,6 +29,7 @@ void handleMonsterCreated(undefined* monster)
 	char* monsterPath = offsetPtr<char>(monster, 0x7741);
 	if (monsterPath[2] == '0' || monsterPath[2] == '1') {
 		LOG(INFO) << "Setting up health messages for " << monsterPath;
+		std::unique_lock l(lock);
 		monsterMessages[monster] = messages;
 	}
 }
@@ -89,14 +93,24 @@ __declspec(dllexport) extern bool Load()
 	HookLambda(MH::Monster::dtor,
 		[](auto monster) {
 			LOG(INFO) << "Monster destroyed " << (void*)monster;
-			monsterMessages.erase(monster);
+			{
+				std::unique_lock l(lock);
+				monsterMessages.erase(monster);
+			}
 			return original(monster);
 		});
-	HookLambda(MH::Monster::LaunchAction, 
-		[](auto monster, auto id) {
-			checkHealth(monster);
-			return original(monster, id);
-		});
+
+	std::thread([]() {
+		while (true) {
+			std::this_thread::sleep_for(std::chrono::seconds(2));
+			{
+				std::unique_lock l(lock);
+				for (auto [monster, queue] : monsterMessages) {
+					checkHealth(monster);
+				}
+			}
+		}
+	}).detach();
 
 	MH_ApplyQueued();
 
