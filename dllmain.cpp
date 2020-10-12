@@ -21,7 +21,7 @@ static std::mutex lock;
 using namespace loader;
 
 void showMessage(std::string message) {
-	MH::Chat::ShowGameMessage(*(undefined**)MH::Chat::MainPtr, &message[0], -1, -1, 0);
+	MH::Chat::ShowGameMessage(*(undefined**)MH::Chat::MainPtr, (undefined*) &message[0], -1, -1, 0);
 }
 
 void handleMonsterCreated(undefined* monster)
@@ -60,7 +60,7 @@ CreateHook(MH::Monster::ctor, ConstructMonster, void*, void* this_ptr, unsigned 
 
 __declspec(dllexport) extern bool Load()
 {
-	if (std::string(GameVersion) != "419914") {
+	if (std::string(GameVersion) != "420540") {
 		LOG(ERR) << "Health Notes : Wrong version";
 		return false;
 	}
