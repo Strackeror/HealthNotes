@@ -59,11 +59,18 @@ struct Hook<R(A...), Id> {
 
   static R c_hook(A... args) { return static_hook(orig, args...); }
 
-  static bool hook(void* addr, hook_function f) {
+  static int hook(void* addr, hook_function f) {
     static_hook = f;
-    MH_CreateHook(addr, (void*)c_hook, (void**)&orig);
-    MH_QueueEnableHook(addr);
-    return true;
+    auto ret = 0;
+    ret = MH_CreateHook(addr, (void*)c_hook, (void**)&orig);
+    if (ret != MH_OK) {
+      return ret;
+    }
+    ret = MH_QueueEnableHook(addr);
+    if (ret != MH_OK) {
+      return ret;
+    }
+    return 0;
   };
 };
 

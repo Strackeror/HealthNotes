@@ -29,7 +29,7 @@ void showMessage(std::string message) { show_message(*(void **)chat_instance, me
 void handleMonsterCreated(void *monster) {
   char *monsterPath = offsetPtr<char>(monster, 0x7741);
   if (monsterPath[2] == '0' || monsterPath[2] == '1') {
-    LOG(INFO) << "Setting up health messages for " << monsterPath;
+    log(INFO, "monster created {} {:p}", monsterPath, monster);
     std::unique_lock l(lock);
     monsterMessages[monster] = messages;
   }
@@ -74,28 +74,29 @@ __declspec(dllexport) extern bool Load() {
   }
 
   auto uenemy_ctor_addr = find_func(sig::monster_ctor);
+  auto uenemy_reset_addr = find_func(sig::monster_reset);
   auto show_message_addr = find_func(sig::show_message);
   auto message_instance_addr = find_func(sig::chat_instance_source);
-  if (!uenemy_ctor_addr || !show_message_addr || !message_instance_addr)
+  if (!uenemy_ctor_addr || !show_message_addr || !message_instance_addr || !uenemy_reset_addr)
     return false;
 
   show_message = reinterpret_cast<decltype(show_message)>(*show_message_addr);
   chat_instance = get_lea_addr(*message_instance_addr + CHAT_INSTANCE_OFFSET);
-
-  auto uenemy_vft = (byte **)get_lea_addr(*uenemy_ctor_addr + UENEMY_LEA_VFT_OFFSET);
-  auto uenemy_dtor_addr = uenemy_vft[0];
-  log(INFO, "chat_instance:{:p} uenemy_dtor:{:p}", chat_instance, (void *)uenemy_dtor_addr);
+  log(INFO, "chat_instance:{:p}", chat_instance);
 
   MH_Initialize();
 
   Hook<void *(void *, int, int)>::hook(*uenemy_ctor_addr, [](auto orig, auto this_, auto id, auto subid) {
+    auto ret = orig(this_, id, subid);
     handleMonsterCreated(this_);
-    return orig(this_, id, subid);
+    return ret;
   });
-  Hook<void *(void *)>::hook(uenemy_dtor_addr, [](auto orig, auto this_) {
+  Hook<void *(void *)>::hook(*uenemy_reset_addr, [](auto orig, auto this_) {
     {
       std::unique_lock l(lock);
-      monsterMessages.erase(this_);
+      if (monsterMessages.erase(this_)) {
+        log(INFO, "Monster {:p} removed", this_);
+      }
     }
     return orig(this_);
   });
